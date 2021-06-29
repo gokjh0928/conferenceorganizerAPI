@@ -1,6 +1,7 @@
 import requests
 import pprint
 import datetime
+import json
 from IPython.display import clear_output as co
 from collections import defaultdict
 
@@ -12,22 +13,19 @@ def main():
         print("Failed to get data")
     data = res.json()['partners']
 
-    ####### Creating the defaultdicts needed to calculate best dates #######
-    # dates is a defaultdict containing key:value pairs of (country):(set of unique dates)
-    # emails is a defaultdict containing a defaultdict (key):(key:value) -> (country):{(unique date):(emails for that unique date)}
-    dates = defaultdict(set)
+    ####### Creating the defaultdict needed to calculate best dates #######
+
+    # emails is a defaultdict containing a defaultdict. --> country:{unique date:[emails for that unique date]}
     emails = defaultdict(lambda: defaultdict(set))
 
     # get the country of each partner and set value to the set of unique available dates for that country
     # per country, for each unique date, there is an associated set of unqiue emails for ppl available at that date
-
     for partner in data:
         country = partner['country']
         datelist = partner['availableDates']
         # makes the dates into a tuple
         for date in datelist:
             dateentry = tuple(date.split('-'))
-            dates[country].add(dateentry)
             emails[country][tuple(dateentry)].add(partner['email'])
 
     ####### Calculate best dates per country #######
@@ -64,8 +62,6 @@ def main():
         # Now for this country, append the best date available
         best_dates.append((country, best_date, best_next_date, most))
 
-    #pprint.pprint(dict(emails), sort_dicts=False)
-
     # Now convert in a format like the sample solution
     sol = []
     for best_data in best_dates:
@@ -75,15 +71,15 @@ def main():
                 attendees.append(email)
         sol.append({
             'attendeeCount': best_data[3],
-            'attendees': attendees,
+            'attendees': sorted(attendees),
             'name': best_data[0],
             'startDate': '-'.join(best_data[1])
         })
 
-    pprint.pprint(sol)
+    pprint.pprint(sol, sort_dicts=False)
 
     res = requests.post(
-        url="https://ct-mock-tech-assessment.herokuapp.com/", json=sol)
+        url="https://ct-mock-tech-assessment.herokuapp.com/", json={"data": json.dumps(sol)})
     print(res.status_code)
 
 
